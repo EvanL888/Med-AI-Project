@@ -1,0 +1,25 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  //"hostRequirements": {"cpus": 4},
+  "waitFor": "onCreateCommand",
+  "updateContentCommand": "pip install -r requirements.txt",
+  //"postCreateCommand": "python3 -m venv .venv && . .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt",
+  "customizations": {
+    "vscode": {
+      "settings":{
+        "python.linting.enabled": true,
+        "pylint.interpreter": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "files.exclude": {"**/__pycache__":true}
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "GitHub.copilot-chat",
+        "GitHub.copilot",
+        "yzhang.markdown-all-in-one", // remove
+        "shd101wyy.markdown-preview-enhanced" // remove
+      ]
+    }
+  }
+}
