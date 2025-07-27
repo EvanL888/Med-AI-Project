@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>medAI - Begin Consultation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='robotic.css') }}">
+</head>
+<body>
+    <div class="consultation-layout">
+        <div class="robot-container robot-top-left">
+            <div class="robot-face">
+                <div class="robot-eyes">
+                    <div class="eye left-eye"></div>
+                    <div class="eye right-eye"></div>
+                </div>
+                <div class="robot-mouth" id="robot-mouth"></div>
+            </div>
+        </div>
+        <div class="chatbot-ui" id="chatbot-ui" style="display: flex; flex-direction: column; align-items: center;">
+            <div class="chat-window" id="chat-window" style="margin-bottom: 0;">
+                <!-- Chat messages will appear here -->
+            </div>
+            <button id="mic-btn" class="mic-btn" title="Push to Talk" style="margin-bottom: 0;">
+                <span style="font-size: 3.5rem; color: #4f8cff; display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16a4 4 0 0 0 4-4V7a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm5-4a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.08A7 7 0 0 1 4 12a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>
+                </span>
+            </button>
+            <div class="patient-actions" style="margin-top: 0;">
+                <button id="home-btn" onclick="window.location.href='/'">Home</button>
+                <button id="scan-btn">Scan</button>
+            </div>
+        </div>
+    </div>
+    <div id="scan-beam" class="scan-beam"></div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='robotic.js') }}"></script>
+</body>
+</html>

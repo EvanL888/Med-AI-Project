@@ -12,9 +12,15 @@ def get_medical_advice(user_input):
     # Example: return azure_client.analyze(user_input)
     return f"Advice for: {user_input}\n\nThis is a placeholder for Azure AI medical advice. Please consult a real doctor for emergencies."
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Route for chatbot UI
+@app.route('/consultation')
+def consultation():
+    return render_template('consultation.html')
 
 
 # Endpoint for advice (JSON)
