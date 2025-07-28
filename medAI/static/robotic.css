@@ -1,3 +1,181 @@
+/* --- ER Chatbot Emergency Room Redesign --- */
+.er-chat-layout {
+    min-height: 100vh;
+    width: 100vw;
+    background: #181c2b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    position: relative;
+}
+.er-chat-window {
+    flex: 1 1 auto;
+    width: 100vw;
+    max-width: 700px;
+    margin: 0 auto;
+    background: #23234a;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 4px 32px #000a, 0 1.5px 0 #2a2a4d;
+    padding: 32px 18px 18px 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 70vh;
+    max-height: 80vh;
+}
+.er-input-bar {
+    width: 100vw;
+    max-width: 700px;
+    margin: 0 auto;
+    background: #23234a;
+    display: flex;
+    align-items: center;
+    padding: 16px 18px 16px 18px;
+    gap: 12px;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 2px 12px #0003;
+}
+.er-mic-btn {
+    background: #23234a;
+    border: 2.5px solid #4f8cff;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    outline: none;
+    margin-right: 6px;
+}
+.er-mic-btn:hover, .er-mic-btn:active {
+    background: #4f8cff;
+    border-color: #23234a;
+}
+.er-chat-input {
+    flex: 1 1 auto;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: none;
+    background: #181c2b;
+    color: #e0e6ed;
+    font-size: 1.1rem;
+    outline: none;
+    margin: 0 6px;
+}
+.er-send-btn {
+    background: #4f8cff;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 4px #0002;
+}
+.er-send-btn:hover {
+    background: #357ae8;
+}
+.er-controls-bar {
+    width: 100vw;
+    max-width: 700px;
+    margin: 0 auto 18px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.er-restart-btn, .er-go-back-btn {
+    background: #23234a;
+    color: #4f8cff;
+    border: 2px solid #4f8cff;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 1.08em;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    box-shadow: 0 1px 4px #0002;
+}
+.er-restart-btn:hover, .er-go-back-btn:hover {
+    background: #4f8cff;
+    color: #fff;
+}
+.er-bubble {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    max-width: 90%;
+}
+.er-bubble.bot {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-self: flex-start;
+}
+.er-bubble.patient {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-self: flex-end;
+}
+.er-bot-icon, .er-patient-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #23234a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px #0002;
+    flex-shrink: 0;
+}
+.er-bot-icon {
+    background: #4f8cff;
+    color: #fff;
+}
+.er-patient-icon {
+    background: #43a047;
+    color: #fff;
+}
+.er-bubble-content {
+    background: #181c2b;
+    color: #e0e6ed;
+    border-radius: 28px;
+    padding: 18px 26px;
+    font-size: 1.15em;
+    box-shadow: 0 6px 24px #0002, 0 2px 8px #4f8cff22;
+    max-width: 420px;
+    word-break: break-word;
+    border: 1.5px solid #23234a;
+    margin-bottom: 2px;
+    margin-top: 2px;
+    text-align: left;
+}
+.er-bubble.bot .er-bubble-content {
+    background: linear-gradient(90deg, #4f8cff 0%, #23234a 100%);
+    color: #fff;
+    border-bottom-left-radius: 18px;
+    border-top-right-radius: 22px;
+    border: 1.5px solid #4f8cff;
+    text-align: left;
+}
+.er-bubble.patient .er-bubble-content {
+    background: linear-gradient(90deg, #43a047 0%, #23234a 100%);
+    color: #fff;
+    border-bottom-right-radius: 18px;
+    border-top-left-radius: 22px;
+    border: 1.5px solid #43a047;
+    text-align: right;
+}
+/* --- End ER Chatbot Emergency Room Redesign --- */
 /* --- Microphone Button Styles --- */
 .mic-btn {
     background: #23234a;
@@ -207,27 +385,34 @@
     overflow: visible;
 }
 .robot-face {
-    background: none;
-    border-radius: 0;
-    width: auto;
-    height: auto;
-    box-shadow: none;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: #181c2b;
+    color: #e0e6ed;
+    border-radius: 28px;
+    padding: 18px 26px;
+    font-size: 1.15em;
+    box-shadow: 0 6px 24px #0002, 0 2px 8px #4f8cff22;
+    max-width: 420px;
+    word-break: break-word;
+    border: 1.5px solid #23234a;
+    margin-bottom: 2px;
+    margin-top: 2px;
+    text-align: left;
     justify-content: center;
     padding: 0;
-    overflow: visible;
-}
-.robot-eyes {
-    display: flex;
+    background: linear-gradient(90deg, #4f8cff 0%, #23234a 100%);
+    color: #fff;
+    border-bottom-left-radius: 18px;
+    border-top-right-radius: 22px;
+    border: 1.5px solid #4f8cff;
+    text-align: left;
     justify-content: center;
     gap: 14vw;
-    margin-bottom: 13vh;
-    margin-top: 0;
-    pointer-events: auto;
-}
+    background: linear-gradient(90deg, #43a047 0%, #23234a 100%);
+    color: #fff;
+    border-bottom-right-radius: 18px;
+    border-top-left-radius: 22px;
+    border: 1.5px solid #43a047;
+    text-align: right;
 .eye {
     width: 10vw;
     height: 10vw;
