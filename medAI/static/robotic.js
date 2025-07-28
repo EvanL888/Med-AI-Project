@@ -1,3 +1,18 @@
+// --- Scan Button Animation ---
+window.addEventListener('DOMContentLoaded', function() {
+    const scanBtn = document.getElementById('scan-btn');
+    const scanBeam = document.getElementById('scan-beam');
+    if (scanBtn && scanBeam) {
+        scanBtn.onclick = function() {
+            scanBeam.style.opacity = '1';
+            scanBeam.style.height = '100vh';
+            setTimeout(function() {
+                scanBeam.style.opacity = '0';
+                scanBeam.style.height = '0';
+            }, 1200);
+        };
+    }
+});
 
 // --- ER Chatbot UI Logic ---
 const chatWindow = document.getElementById('chat-window');
@@ -112,7 +127,7 @@ if (restartBtn) {
 // Go Back button
 if (goBackBtn) {
     goBackBtn.onclick = function() {
-        window.history.back();
+        window.location.href = '/';
     };
 }
 

@@ -15,7 +15,7 @@ def get_medical_advice(user_input):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('robot_home.html')
 
 # Route for chatbot UI
 @app.route('/consultation')
