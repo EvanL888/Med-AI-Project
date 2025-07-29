@@ -551,3 +551,71 @@ body {
     display: none;
     white-space: pre-line;
 }
+
+/* Generate Report Button */
+.er-generate-report-btn {
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    box-shadow: 0 3px 8px rgba(67, 160, 71, 0.3);
+}
+
+.er-generate-report-btn:hover {
+    background: linear-gradient(135deg, #388e3c, #43a047);
+    box-shadow: 0 4px 12px rgba(67, 160, 71, 0.4);
+    transform: translateY(-1px);
+}
+
+.er-generate-report-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(67, 160, 71, 0.3);
+}
+
+/* Report Bubble Styling */
+.report-bubble {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6) !important;
+    border-left: 4px solid #22c55e !important;
+    margin: 15px 0 !important;
+}
+
+.report-content {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    white-space: pre-line;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Download Report Button */
+.download-report-btn {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: #1f2937;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.download-report-btn:hover {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    box-shadow: 0 3px 8px rgba(245, 158, 11, 0.4);
+    transform: translateY(-1px);
+}
+
+.download-report-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(245, 158, 11, 0.3);
+}
