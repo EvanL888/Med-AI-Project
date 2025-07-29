@@ -61,12 +61,12 @@ function sendMessage() {
     appendMessage('patient', text);
     chatInput.value = '';
     appendMessage('bot', 'Processing...');
-    axios.post('/get_advice', {text: text})
+    axios.post('/chat', {message: text})
         .then(res => {
             // Remove last 'Processing...' message
             const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
             if (lastBotMsg) lastBotMsg.remove();
-            appendMessage('bot', res.data.advice);
+            appendMessage('bot', res.data.response);
         })
         .catch(() => {
             const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
@@ -97,11 +97,11 @@ if (micBtn) {
             let transcript = event.results[0][0].transcript;
             appendMessage('patient', transcript);
             appendMessage('bot', 'Processing...');
-            axios.post('/get_advice', {text: transcript})
+            axios.post('/chat', {message: transcript})
                 .then(res => {
                     const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
                     if (lastBotMsg) lastBotMsg.remove();
-                    appendMessage('bot', res.data.advice);
+                    appendMessage('bot', res.data.response);
                 })
                 .catch(() => {
                     const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
@@ -120,7 +120,7 @@ if (micBtn) {
 if (restartBtn) {
     restartBtn.onclick = function() {
         clearChat();
-        appendMessage('bot', 'Hello! I am your ER assistant. Can you describe your symptoms?');
+        appendMessage('bot', 'Hello! I\'m Vitalis, your friendly AI health companion! 🌟 I\'m here to help you with fitness, nutrition, and wellness advice. What health goal are you working on today?');
     };
 }
 
@@ -134,5 +134,5 @@ if (goBackBtn) {
 // Initial greeting
 window.addEventListener('DOMContentLoaded', function() {
     clearChat();
-    appendMessage('bot', 'Hello! I am your ER assistant. Can you describe your symptoms?');
+    appendMessage('bot', 'Hello! I\'m Vitalis, your friendly AI health companion! 🌟 I\'m here to help you with fitness, nutrition, and wellness advice. What health goal are you working on today?');
 });
