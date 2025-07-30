@@ -619,3 +619,29 @@ body {
     transform: translateY(0);
     box-shadow: 0 1px 4px rgba(245, 158, 11, 0.3);
 }
+
+/* View Report Button */
+.view-report-btn {
+    background: linear-gradient(135deg, #3182ce, #2c5282);
+    color: white;
+    border: none;
+    padding: 15px 25px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 15px 10px 5px 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
+
+.view-report-btn:hover {
+    background: linear-gradient(135deg, #2c5282, #2a4365);
+    box-shadow: 0 6px 16px rgba(49, 130, 206, 0.4);
+    transform: translateY(-2px);
+}
+
+.view-report-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 8px rgba(49, 130, 206, 0.3);
+}

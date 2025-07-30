@@ -34,6 +34,8 @@ const generateReportBtn = document.getElementById('generate-report-btn');
 
 // Conversation history for consultation
 let conversationHistory = [];
+let currentPatient = null;
+let isReturningPatient = false;
 
 // SVGs for icons
 // Stylized robot face SVG (modern, friendly)
@@ -74,6 +76,36 @@ function appendMessage(sender, text) {
 function clearChat() {
     chatWindow.innerHTML = '';
     conversationHistory = [];
+    currentPatient = null;
+    isReturningPatient = false;
+}
+
+// Helper function to extract patient name from conversation
+function extractPatientName(history) {
+    for (let msg of history) {
+        if (msg.role === 'user') {
+            const content = msg.content.toLowerCase();
+            // Look for name patterns
+            const namePatterns = [
+                /my name is\s+([a-zA-Z\s]+)/i,
+                /i am\s+([a-zA-Z\s]+)/i,
+                /this is\s+([a-zA-Z\s]+)/i
+            ];
+            
+            for (let pattern of namePatterns) {
+                const match = content.match(pattern);
+                if (match && match[1].trim().split(' ').length >= 2) {
+                    return match[1].trim();
+                }
+            }
+            
+            // If first user message and looks like a name
+            if (history.indexOf(msg) <= 2 && /^[a-zA-Z\s]+$/.test(msg.content) && msg.content.trim().split(' ').length >= 2) {
+                return msg.content.trim();
+            }
+        }
+    }
+    return null;
 }
 
 function sendMessage() {
@@ -95,6 +127,23 @@ function sendMessage() {
                 lastBotMsg.remove();
                 conversationHistory.pop(); // Remove "Processing..." from history
             }
+            
+            // Check if an existing patient was found
+            if (res.data.existing_patient && res.data.existing_patient.found) {
+                currentPatient = res.data.existing_patient;
+                isReturningPatient = true;
+                
+                // Show returning patient notification
+                const welcomeMessage = `Welcome back, ${currentPatient.name}! I found your previous medical record from ${currentPatient.last_consultation}. Let me review your information and focus on any new concerns or updates since your last visit.`;
+                appendMessage('bot', welcomeMessage);
+                
+                // Show patient summary
+                if (currentPatient.summary) {
+                    const summaryMessage = `Here's a summary of your existing information: ${currentPatient.summary}`;
+                    appendMessage('bot', summaryMessage);
+                }
+            }
+            
             appendMessage('bot', res.data.response);
         })
         .catch(() => {
@@ -141,6 +190,17 @@ if (micBtn) {
                         lastBotMsg.remove();
                         conversationHistory.pop(); // Remove "Processing..." from history
                     }
+                    
+                    // Check if an existing patient was found
+                    if (res.data.existing_patient && res.data.existing_patient.found) {
+                        currentPatient = res.data.existing_patient;
+                        isReturningPatient = true;
+                        
+                        // Show returning patient notification
+                        const welcomeMessage = `Welcome back, ${currentPatient.name}! I found your previous medical record from ${currentPatient.last_consultation}.`;
+                        appendMessage('bot', welcomeMessage);
+                    }
+                    
                     appendMessage('bot', res.data.response);
                 })
                 .catch(() => {
@@ -163,20 +223,38 @@ if (micBtn) {
 if (restartBtn) {
     restartBtn.onclick = function () {
         clearChat();
-        appendMessage('bot', 'Hello! I\'m your medical consultation assistant. I\'ll ask you a series of questions to better understand your health concerns and provide you with a comprehensive report. Let\'s start: What is your main health concern or symptom today?');
+        appendMessage('bot', 'Welcome to your comprehensive medical consultation! I\'m here to gather detailed information about your health, medical history, and current concerns. If you\'ve been here before, I can access your previous medical records to save time. This consultation will help create a complete medical record that can be shared with healthcare providers. Let\'s begin with your basic information: What is your full name?');
     };
 }
 
 // Generate Report button
 if (generateReportBtn) {
     generateReportBtn.onclick = function () {
-        if (conversationHistory.length < 6) {
-            appendMessage('bot', 'I need more information before generating a report. Please answer a few more questions about your health concerns.');
+        if (conversationHistory.length < 10) {
+            appendMessage('bot', 'I need more comprehensive information before generating a complete medical report. Please continue answering the consultation questions.');
             return;
         }
 
-        appendMessage('bot', 'Generating your medical consultation report...');
+        appendMessage('bot', 'Generating your comprehensive medical consultation report and saving your information...');
 
+        // First save patient data to database
+        const patientName = extractPatientName(conversationHistory);
+        
+        if (patientName) {
+            // Save patient information
+            axios.post('/save_patient', {
+                name: patientName,
+                history: conversationHistory.slice(0, -1)
+            })
+            .then(() => {
+                console.log('Patient data saved successfully');
+            })
+            .catch(err => {
+                console.error('Error saving patient data:', err);
+            });
+        }
+
+        // Generate report
         axios.post('/generate_report', {
             history: conversationHistory.slice(0, -1) // Exclude the "Generating..." message
         })
@@ -188,7 +266,10 @@ if (generateReportBtn) {
                     conversationHistory.pop(); // Remove "Generating..." from history
                 }
 
-                // Create a special report bubble
+                // Store report data in sessionStorage for the report page
+                sessionStorage.setItem('medicalReport', res.data.report);
+
+                // Create report ready message with button to view report
                 const reportBubble = document.createElement('div');
                 reportBubble.className = 'er-bubble bot report-bubble';
 
@@ -198,21 +279,66 @@ if (generateReportBtn) {
 
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'er-bubble-content report-content';
-                contentDiv.innerHTML = res.data.report.replace(/\n/g, '<br>');
+                contentDiv.innerHTML = `
+                    <h3>📋 Medical Report Generated Successfully!</h3>
+                    <p>Your comprehensive medical consultation report has been prepared and is ready for review.</p>
+                    <p><strong>Report includes:</strong></p>
+                    <ul>
+                        <li>Patient identification and contact information</li>
+                        <li>Vital signs and measurements</li>
+                        <li>Medical history and current medications</li>
+                        <li>Lifestyle assessment</li>
+                        <li>Clinical recommendations</li>
+                        <li>Medical records authorization status</li>
+                    </ul>
+                    <p>Click the button below to view your detailed medical report in a professional format.</p>
+                `;
 
-                reportBubble.appendChild(iconDiv);
-                reportBubble.appendChild(contentDiv);
-                chatWindow.appendChild(reportBubble);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
+                // Add view report button
+                const viewReportBtn = document.createElement('button');
+                viewReportBtn.textContent = '📋 View Medical Report';
+                viewReportBtn.className = 'view-report-btn';
+                viewReportBtn.style.cssText = `
+                    background: linear-gradient(135deg, #3182ce, #2c5282);
+                    color: white;
+                    border: none;
+                    padding: 15px 25px;
+                    border-radius: 8px;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin: 15px 10px 5px 0;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+                `;
+                viewReportBtn.onmouseover = function () {
+                    this.style.background = 'linear-gradient(135deg, #2c5282, #2a4365)';
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 6px 16px rgba(49, 130, 206, 0.4)';
+                };
+                viewReportBtn.onmouseout = function () {
+                    this.style.background = 'linear-gradient(135deg, #3182ce, #2c5282)';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 12px rgba(49, 130, 206, 0.3)';
+                };
+                viewReportBtn.onclick = function () {
+                    window.open('/medical_report', '_blank');
+                };
 
-                // Add download button for the report
+                // Add download button for backup
                 const downloadBtn = document.createElement('button');
-                downloadBtn.textContent = 'Download Report';
+                downloadBtn.textContent = '💾 Download Backup';
                 downloadBtn.className = 'download-report-btn';
                 downloadBtn.onclick = function () {
                     downloadReport(res.data.report);
                 };
+
+                contentDiv.appendChild(viewReportBtn);
                 contentDiv.appendChild(downloadBtn);
+                reportBubble.appendChild(iconDiv);
+                reportBubble.appendChild(contentDiv);
+                chatWindow.appendChild(reportBubble);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
             })
             .catch(() => {
                 const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
@@ -250,6 +376,6 @@ window.addEventListener('DOMContentLoaded', function () {
     // Only show consultation greeting if we're on the consultation page
     if (chatWindow) {
         clearChat();
-        appendMessage('bot', 'Hello! I\'m your medical consultation assistant. I\'ll ask you a series of questions to better understand your health concerns and provide you with a comprehensive report. Let\'s start: What is your main health concern or symptom today?');
+        appendMessage('bot', 'Welcome to your comprehensive medical consultation! I\'m here to gather detailed information about your health, medical history, and current concerns. If you\'ve been here before, I can access your previous medical records to save time. This consultation will help create a complete medical record that can be shared with healthcare providers. Let\'s begin with your basic information: What is your full name?');
     }
 });

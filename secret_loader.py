@@ -4,6 +4,7 @@ import sys
 import os
  
 SECRET_PATH = r"C:\Users\Evan\Documents\VS Code\API Keys\secrets.py"
+FALLBACK_SECRET_PATH = r"C:\Users\ahmtt\Documents\VS\API KEY\secret.py"
  
 class Secret:
     """Secrets for Azure OpenAI (loaded at runtime)."""
@@ -21,11 +22,17 @@ class Secret:
  
  
 def load_secrets() -> Secret:
-    """Dynamically import secret.py from fixed path. Fail gracefully if missing."""
+    """Dynamically import secret.py from fixed path or fallback path. Fail gracefully if missing."""
+    # Try primary path first, then fallback path
+    secret_path = SECRET_PATH
     if not os.path.exists(SECRET_PATH):
-        raise RuntimeError(f"secret.py not found at {SECRET_PATH}. Please create it with your Azure OpenAI credentials.")
+        if os.path.exists(FALLBACK_SECRET_PATH):
+            secret_path = FALLBACK_SECRET_PATH
+        else:
+            raise RuntimeError(f"secret.py not found at {SECRET_PATH} or {FALLBACK_SECRET_PATH}. Please create it with your Azure OpenAI credentials.")
+    
     try:
-        spec = importlib.util.spec_from_file_location("secret", SECRET_PATH)
+        spec = importlib.util.spec_from_file_location("secret", secret_path)
         secret = importlib.util.module_from_spec(spec)
         sys.modules["secret"] = secret
         spec.loader.exec_module(secret)
@@ -48,8 +55,8 @@ def load_secrets() -> Secret:
             s.AZURE_OPENAI_SPEECH_STT_DEPLOYMENT,
             s.AZURE_OPENAI_SPEECH_TTS_DEPLOYMENT,
         ]):
-            raise RuntimeError("secret.py is missing required fields. Please check your credentials.")
+            raise RuntimeError(f"secret.py is missing required fields. Please check your credentials at {secret_path}.")
         return s
     except Exception as e:
-        raise RuntimeError("Failed to load secrets from secret.py. Please check the file and try again. [REDACTED]") from None
+        raise RuntimeError(f"Failed to load secrets from secret.py at {secret_path}. Please check the file and try again. [REDACTED]") from None
  
