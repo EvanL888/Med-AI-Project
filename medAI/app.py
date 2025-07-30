@@ -261,7 +261,9 @@ def chat():
         return jsonify({'error': f'Error loading secrets: {str(e)}'}), 500
     
     try:
-        print("Task started with Chat API")
+        print("=== CHAT API TASK STARTED ===")
+        print(f"User message: '{user_message[:100]}{'...' if len(user_message) > 100 else ''}'")
+        
         client = openai.AzureOpenAI(
             api_key=secrets.AZURE_OPENAI_API_KEY,
             api_version="2023-05-15",
@@ -277,10 +279,14 @@ def chat():
             temperature=0.7
         )
         ai_message = response.choices[0].message.content
-        print("Task complete Chat API")
+        
+        print(f"AI response: '{ai_message[:100]}{'...' if len(ai_message) > 100 else ''}'")
+        print("=== CHAT API TASK COMPLETED ===")
+        
         return jsonify({"response": ai_message})
     except Exception as e:
-        print("Chat exception:", e)
+        print(f"Chat exception: {e}")
+        print("=== CHAT API TASK FAILED ===")
         return jsonify({'error': f'Error from OpenAI: {str(e)}'}), 500
 
 # Consultation questionnaire endpoint
@@ -302,7 +308,9 @@ def consultation_chat():
         return jsonify({'error': f'Error loading secrets: {str(e)}'}), 500
     
     try:
-        print("Task started with Consultation Chat API")
+        print("=== CONSULTATION CHAT API TASK STARTED ===")
+        print(f"User message: '{user_message[:100]}{'...' if len(user_message) > 100 else ''}'")
+        print(f"Conversation history length: {len(conversation_history)} messages")
         
         # Check if this might be a patient name for lookup
         existing_patient = None
@@ -438,10 +446,12 @@ Ask ONE question at a time. Be empathetic and professional. After gathering comp
                 "summary": existing_patient.get_summary()
             }
         
-        print("Task complete Consultation Chat API")
+        print(f"AI response: '{ai_message[:100]}{'...' if len(ai_message) > 100 else ''}'")
+        print("=== CONSULTATION CHAT API TASK COMPLETED ===")
         return jsonify(response_data)
     except Exception as e:
-        print("Consultation chat exception:", e)
+        print(f"Consultation chat exception: {e}")
+        print("=== CONSULTATION CHAT API TASK FAILED ===")
         return jsonify({'error': f'Error from OpenAI: {str(e)}'}), 500
 
 # Generate consultation report
@@ -460,7 +470,9 @@ def generate_report():
         return jsonify({'error': f'Error loading secrets: {str(e)}'}), 500
     
     try:
-        print("Task started with Report Generation API")
+        print("=== REPORT GENERATION API TASK STARTED ===")
+        print(f"Generating report from {len(conversation_history)} conversation messages")
+        
         client = openai.AzureOpenAI(
             api_key=secrets.AZURE_OPENAI_API_KEY,
             api_version="2023-05-15",
@@ -549,10 +561,12 @@ Format this report professionally with clear sections and bullet points for easy
             temperature=0.3
         )
         report = response.choices[0].message.content
-        print("Task complete Report Generation API")
+        print(f"Generated report length: {len(report)} characters")
+        print("=== REPORT GENERATION API TASK COMPLETED ===")
         return jsonify({"report": report})
     except Exception as e:
-        print("Report generation exception:", e)
+        print(f"Report generation exception: {e}")
+        print("=== REPORT GENERATION API TASK FAILED ===")
         return jsonify({'error': f'Error generating report: {str(e)}'}), 500
 
 # Endpoint for advice (plain text, for TTS)
@@ -566,54 +580,124 @@ def speak_advice():
 # Speech-to-Text endpoint: convert uploaded audio file to text
 @app.route('/speech-to-text', methods=['POST'])
 def speech_to_text():
-    """Convert uploaded audio file to text via Azure OpenAI Whisper."""
+    """Convert uploaded audio file to text via Azure Speech Services."""
     try:
+        print("=== SPEECH-TO-TEXT TASK STARTED ===")
+        
         if 'file' not in request.files:
+            print("ERROR: No audio file provided in request")
             return jsonify({'error': 'No audio file provided'}), 400
         
         file = request.files['file']
         if file.filename == '':
+            print("ERROR: No file selected")
             return jsonify({'error': 'No file selected'}), 400
+        
+        print(f"Processing audio file: {file.filename}, Content-Type: {file.content_type}")
         
         secrets = load_secrets()
         audio_content = file.read()
         
-        # Use the direct endpoint from your secret.py
-        stt_url = secrets.AZURE_SPEECH_STT_ENDPOINT
+        print(f"Audio file size: {len(audio_content)} bytes")
+        print(f"Using STT endpoint: {secrets.AZURE_SPEECH_STT_ENDPOINT}")
+        print(f"Using STT region: {secrets.AZURE_SPEECH_STT_REGION}")
         
-        files = {
-            'file': (file.filename, audio_content, file.content_type)
-        }
-        headers = {
-            'api-key': secrets.AZURE_SPEECH_STT_KEY
-        }
+        # Try Azure Speech Services format first
+        if secrets.AZURE_SPEECH_STT_REGION and 'cognitiveservices' in secrets.AZURE_SPEECH_STT_ENDPOINT:
+            print("Using Azure Speech Services format")
+            
+            # Azure Speech Services uses different format
+            files = {
+                'audio': (file.filename, audio_content, 'audio/wav')
+            }
+            headers = {
+                'Ocp-Apim-Subscription-Key': secrets.AZURE_SPEECH_STT_KEY
+            }
+            
+            # Build proper Azure Speech Services URL
+            stt_url = secrets.AZURE_SPEECH_STT_ENDPOINT
+            params = {
+                'language': 'en-US',
+                'format': 'simple'
+            }
+            
+            print(f"Making request to: {stt_url}")
+            print(f"Request params: {params}")
+            
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(stt_url, files=files, headers=headers, params=params)
         
-        print("Task started with Speech-to-Text API")
-        with httpx.Client() as client:
-            resp = client.post(stt_url, files=files, headers=headers)
+        else:
+            print("Using OpenAI Whisper format")
+            
+            # OpenAI Whisper format (fallback)
+            stt_url = secrets.AZURE_SPEECH_STT_ENDPOINT
+            
+            files = {
+                'file': (file.filename, audio_content, file.content_type)
+            }
+            headers = {
+                'api-key': secrets.AZURE_SPEECH_STT_KEY
+            }
+            
+            print(f"Making request to: {stt_url}")
+            
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(stt_url, files=files, headers=headers)
+        
+        print(f"Response status code: {resp.status_code}")
         resp.raise_for_status()
-        print("Task complete Speech-to-Text API")
         
         result = resp.json()
-        transcribed_text = result.get('text', '')
+        print(f"Response JSON: {result}")
+        
+        # Handle different response formats
+        transcribed_text = ""
+        if 'DisplayText' in result:
+            # Azure Speech Services format
+            transcribed_text = result.get('DisplayText', '')
+        elif 'text' in result:
+            # OpenAI Whisper format
+            transcribed_text = result.get('text', '')
+        elif 'Text' in result:
+            # Alternative Azure format
+            transcribed_text = result.get('Text', '')
+        
+        print(f"Transcribed text: '{transcribed_text}'")
+        print("=== SPEECH-TO-TEXT TASK COMPLETED ===")
+        
         return jsonify({"transcription": transcribed_text})
         
+    except httpx.HTTPStatusError as e:
+        print(f"HTTP error in speech-to-text: {e}")
+        print(f"Response content: {e.response.content}")
+        return jsonify({'error': f'Speech-to-text HTTP error: {e.response.status_code}'}), 500
     except Exception as e:
-        print("Speech-to-text exception:", e)
+        print(f"Exception in speech-to-text: {e}")
+        print("=== SPEECH-TO-TEXT TASK FAILED ===")
         return jsonify({'error': f'Speech-to-text error: {str(e)}'}), 500
 
 # Text-to-Speech endpoint: convert AI text response to audio
 @app.route('/text-to-speech', methods=['POST'])
 def text_to_speech():
-    """Convert provided text to speech audio via Azure OpenAI TTS."""
+    """Convert provided text to speech audio via Azure Speech Services."""
     try:
+        print("=== TEXT-TO-SPEECH TASK STARTED ===")
+        
         data = request.json
         text = data.get('text', '') if data else ''
         
         if not text:
+            print("ERROR: No text provided for TTS")
             return jsonify({'error': 'No text provided'}), 400
         
+        print(f"Converting text to speech: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+        print(f"Text length: {len(text)} characters")
+        
         secrets = load_secrets()
+        
+        print(f"Using TTS endpoint: {secrets.AZURE_SPEECH_TTS_ENDPOINT}")
+        print(f"Using TTS region: {secrets.AZURE_SPEECH_TTS_REGION}")
         
         # Use the direct endpoint from your secret.py
         tts_url = secrets.AZURE_SPEECH_TTS_ENDPOINT
@@ -628,18 +712,30 @@ def text_to_speech():
             'Content-Type': 'application/json'
         }
         
-        print("Task started with Text-to-Speech API")
-        with httpx.Client() as client:
+        print(f"Making TTS request to: {tts_url}")
+        print(f"Request payload model: {payload['model']}, voice: {payload['voice']}")
+        
+        with httpx.Client(timeout=60.0) as client:
             resp = client.post(tts_url, json=payload, headers=headers)
+        
+        print(f"TTS Response status code: {resp.status_code}")
         resp.raise_for_status()
-        print("Task complete Text-to-Speech API")
         
         # Return the audio as base64
         audio_base64 = base64.b64encode(resp.content).decode('utf-8')
+        print(f"Generated audio size: {len(resp.content)} bytes (base64: {len(audio_base64)} chars)")
+        print("=== TEXT-TO-SPEECH TASK COMPLETED ===")
+        
         return jsonify({"audio": audio_base64})
         
+    except httpx.HTTPStatusError as e:
+        print(f"HTTP error in text-to-speech: {e}")
+        print(f"Response content: {e.response.content}")
+        print("=== TEXT-TO-SPEECH TASK FAILED ===")
+        return jsonify({'error': f'Text-to-speech HTTP error: {e.response.status_code}'}), 500
     except Exception as e:
-        print("Text-to-speech exception:", e)
+        print(f"Exception in text-to-speech: {e}")
+        print("=== TEXT-TO-SPEECH TASK FAILED ===")
         return jsonify({'error': f'Text-to-speech error: {str(e)}'}), 500
 
 

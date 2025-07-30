@@ -59,13 +59,13 @@ function appendMessage(sender, text) {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'er-bubble-content';
     contentDiv.textContent = text;
-    
+
     // Add speaker and stop icons for bot messages to indicate TTS capability
     if (sender === 'bot') {
         const audioControlsDiv = document.createElement('div');
         audioControlsDiv.style.display = 'inline-block';
         audioControlsDiv.style.marginLeft = '5px';
-        
+
         const speakerIcon = document.createElement('span');
         speakerIcon.innerHTML = '🔊';
         speakerIcon.style.cursor = 'pointer';
@@ -73,19 +73,19 @@ function appendMessage(sender, text) {
         speakerIcon.style.marginRight = '5px';
         speakerIcon.title = 'Click to hear this message';
         speakerIcon.onclick = () => speakText(text);
-        
+
         const stopIcon = document.createElement('span');
         stopIcon.innerHTML = '⏹️';
         stopIcon.style.cursor = 'pointer';
         stopIcon.style.fontSize = '14px';
         stopIcon.title = 'Stop audio playback';
         stopIcon.onclick = () => stopAudio();
-        
+
         audioControlsDiv.appendChild(speakerIcon);
         audioControlsDiv.appendChild(stopIcon);
         contentDiv.appendChild(audioControlsDiv);
     }
-    
+
     bubbleDiv.appendChild(iconDiv);
     bubbleDiv.appendChild(contentDiv);
     chatWindow.appendChild(bubbleDiv);
@@ -193,7 +193,7 @@ function sendMessage() {
 function speakText(text) {
     // Stop any currently playing audio
     stopAudio();
-    
+
     axios.post('/text-to-speech', { text: text })
         .then(response => {
             const audioBase64 = response.data.audio;
@@ -202,19 +202,19 @@ function speakText(text) {
                 const audioBlob = base64ToBlob(audioBase64, 'audio/mpeg');
                 const audioUrl = URL.createObjectURL(audioBlob);
                 currentAudio = new Audio(audioUrl);
-                
+
                 // Add event listener to clean up when audio ends
                 currentAudio.addEventListener('ended', () => {
                     currentAudio = null;
                     URL.revokeObjectURL(audioUrl);
                 });
-                
+
                 // Add event listener to clean up on error
                 currentAudio.addEventListener('error', () => {
                     currentAudio = null;
                     URL.revokeObjectURL(audioUrl);
                 });
-                
+
                 currentAudio.play().catch(error => {
                     console.error('Error playing audio:', error);
                     currentAudio = null;
@@ -237,7 +237,7 @@ function stopAudio() {
         currentAudio.currentTime = 0;
         currentAudio = null;
     }
-    
+
     // Stop browser's built-in speech synthesis
     if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
@@ -260,7 +260,7 @@ function fallbackTextToSpeech(text) {
     if ('speechSynthesis' in window) {
         // Stop any currently playing speech
         speechSynthesis.cancel();
-        
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.8;
         utterance.pitch = 1;
@@ -304,7 +304,7 @@ if (micBtn) {
 
                 audioChunks = [];
                 mediaRecorder = new MediaRecorder(stream);
-                
+
                 mediaRecorder.ondataavailable = event => {
                     audioChunks.push(event.data);
                 };
@@ -312,12 +312,12 @@ if (micBtn) {
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     sendAudioToServer(audioBlob);
-                    
+
                     // Reset UI
                     micBtn.style.backgroundColor = '';
                     micBtn.innerHTML = '🎤';
                     isRecording = false;
-                    
+
                     // Stop all tracks to release the microphone
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -338,7 +338,7 @@ if (micBtn) {
 
     function sendAudioToServer(audioBlob) {
         appendMessage('bot', 'Processing your voice...');
-        
+
         const formData = new FormData();
         formData.append('file', audioBlob, 'audio.wav');
 
@@ -347,32 +347,32 @@ if (micBtn) {
                 'Content-Type': 'multipart/form-data'
             }
         })
-        .then(response => {
-            const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
-            if (lastBotMsg) {
-                lastBotMsg.remove();
-                conversationHistory.pop(); // Remove "Processing..." from history
-            }
+            .then(response => {
+                const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
+                if (lastBotMsg) {
+                    lastBotMsg.remove();
+                    conversationHistory.pop(); // Remove "Processing..." from history
+                }
 
-            const transcription = response.data.transcription;
-            if (transcription) {
-                appendMessage('patient', transcription);
-                
-                // Now send the transcribed text to the consultation chat
-                sendMessageToConsultation(transcription);
-            } else {
-                appendMessage('bot', 'Could not understand your speech. Please try again or type your response.');
-            }
-        })
-        .catch(error => {
-            console.error('Speech-to-text error:', error);
-            const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
-            if (lastBotMsg) {
-                lastBotMsg.remove();
-                conversationHistory.pop();
-            }
-            appendMessage('bot', 'Sorry, there was an error processing your speech. Please try typing instead.');
-        });
+                const transcription = response.data.transcription;
+                if (transcription) {
+                    appendMessage('patient', transcription);
+
+                    // Now send the transcribed text to the consultation chat
+                    sendMessageToConsultation(transcription);
+                } else {
+                    appendMessage('bot', 'Could not understand your speech. Please try again or type your response.');
+                }
+            })
+            .catch(error => {
+                console.error('Speech-to-text error:', error);
+                const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
+                if (lastBotMsg) {
+                    lastBotMsg.remove();
+                    conversationHistory.pop();
+                }
+                appendMessage('bot', 'Sorry, there was an error processing your speech. Please try typing instead.');
+            });
     }
 
     // Fallback to browser's built-in speech recognition if Azure fails
@@ -595,12 +595,12 @@ if (speechToggleBtn) {
         autoSpeechEnabled = !autoSpeechEnabled;
         speechToggleBtn.textContent = autoSpeechEnabled ? '🔊 Auto-Speech: ON' : '🔇 Auto-Speech: OFF';
         speechToggleBtn.title = autoSpeechEnabled ? 'Click to disable automatic speech' : 'Click to enable automatic speech';
-        
+
         // Stop any currently playing speech
         if (!autoSpeechEnabled && 'speechSynthesis' in window) {
             speechSynthesis.cancel();
         }
-        
+
         // Visual feedback
         speechToggleBtn.style.backgroundColor = autoSpeechEnabled ? '#4caf50' : '#f44336';
         setTimeout(() => {
@@ -615,9 +615,9 @@ window.addEventListener('DOMContentLoaded', function () {
     if (chatWindow) {
         clearChat();
         const welcomeMessage = 'Welcome to your comprehensive medical consultation! I\'m here to gather detailed information about your health, medical history, and current concerns. If you\'ve been here before, I can access your previous medical records to save time. This consultation will help create a complete medical record that can be shared with healthcare providers. Let\'s begin with your basic information: What is your full name?';
-        
+
         appendMessage('bot', welcomeMessage);
-        
+
         // Automatically speak the welcome message
         setTimeout(() => {
             speakText(welcomeMessage);
