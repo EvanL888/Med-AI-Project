@@ -165,7 +165,7 @@ function sendMessage() {
             if (res.data.existing_patient && res.data.existing_patient.found) {
                 currentPatient = res.data.existing_patient;
                 isReturningPatient = true;
-
+console.log('Returning patient found:', currentPatient);
                 // Show returning patient notification
                 const welcomeMessage = `Welcome back, ${currentPatient.name}! I found your previous medical record from ${currentPatient.last_consultation}. Let me review your information and focus on any new concerns or updates since your last visit.`;
                 appendMessage('bot', welcomeMessage);
@@ -242,6 +242,20 @@ function stopAudio() {
     if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
     }
+
+    // Clear any pending speech timeouts
+    if (window.speechTimeout) {
+        clearTimeout(window.speechTimeout);
+        window.speechTimeout = null;
+    }
+
+    // Stop speech recognition if it's active
+    if (micBtn && typeof isRecording !== 'undefined' && isRecording && recognition) {
+        recognition.stop();
+        isRecording = false;
+        micBtn.style.backgroundColor = '';
+        micBtn.innerHTML = '🎤';
+    }
 }
 
 // Helper function to convert base64 to blob
@@ -274,134 +288,179 @@ chatInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') sendMessage();
 });
 
-// Push-to-talk (speech-to-text) - Enhanced with Azure Speech Services
+// Push-to-talk (speech-to-text) - Using WebKit Speech Recognition
 if (micBtn) {
     let isRecording = false;
-    let mediaRecorder;
-    let audioChunks = [];
+    let recognition;
 
     micBtn.onclick = function () {
+        console.log('Microphone button clicked, isRecording:', isRecording);
         if (!isRecording) {
-            startRecording();
+            startSpeechRecognition();
         } else {
-            stopRecording();
+            stopSpeechRecognition();
         }
     };
 
-    function startRecording() {
-        // Check if browser supports media recording
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            appendMessage('bot', 'Voice recording not supported in this browser.');
+    function startSpeechRecognition() {
+        console.log('startSpeechRecognition called');
+        
+        // Check if browser supports speech recognition
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.log('Speech recognition not supported');
+            appendMessage('bot', 'Speech recognition not supported in this browser. Please use Chrome, Edge, or Safari.');
             return;
         }
 
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                isRecording = true;
-                micBtn.style.backgroundColor = '#ff4444';
-                micBtn.innerHTML = '🛑'; // Stop icon
-                appendMessage('bot', 'Recording... Click the microphone again to stop.');
+        console.log('Speech recognition supported, starting...');
+        
+        // Stop any currently playing audio before starting speech recognition
+        stopAudio();
 
-                audioChunks = [];
-                mediaRecorder = new MediaRecorder(stream);
+        isRecording = true;
+        micBtn.style.backgroundColor = '#ff4444';
+        micBtn.innerHTML = '🛑'; // Stop icon
+        appendMessage('bot', 'Listening... Speak now, then click the microphone again to stop.');
 
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
+        console.log('UI updated, creating recognition object');
 
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    sendAudioToServer(audioBlob);
+        // Initialize speech recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        // Configure recognition settings
+        recognition.continuous = true; // Keep listening until manually stopped
+        recognition.interimResults = true; // Show results as user speaks
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
 
-                    // Reset UI
-                    micBtn.style.backgroundColor = '';
-                    micBtn.innerHTML = '🎤';
-                    isRecording = false;
+        console.log('Recognition object configured, setting up event handlers');
 
-                    // Stop all tracks to release the microphone
-                    stream.getTracks().forEach(track => track.stop());
-                };
+        // Handle speech recognition results
+        recognition.onresult = function (event) {
+            console.log('Speech recognition onresult triggered');
+            let transcript = '';
+            let isFinal = false;
 
-                mediaRecorder.start();
-            })
-            .catch(error => {
-                console.error('Error accessing microphone:', error);
-                appendMessage('bot', 'Could not access microphone. Please check permissions.');
-            });
-    }
-
-    function stopRecording() {
-        if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-        }
-    }
-
-    function sendAudioToServer(audioBlob) {
-        appendMessage('bot', 'Processing your voice...');
-
-        const formData = new FormData();
-        formData.append('file', audioBlob, 'audio.wav');
-
-        axios.post('/speech-to-text', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
-            .then(response => {
-                const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
-                if (lastBotMsg) {
-                    lastBotMsg.remove();
-                    conversationHistory.pop(); // Remove "Processing..." from history
-                }
-
-                const transcription = response.data.transcription;
-                if (transcription) {
-                    appendMessage('patient', transcription);
-
-                    // Now send the transcribed text to the consultation chat
-                    sendMessageToConsultation(transcription);
+            // Get the latest transcript
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript += event.results[i][0].transcript;
+                    isFinal = true;
+                    console.log('Final result detected:', transcript);
                 } else {
-                    appendMessage('bot', 'Could not understand your speech. Please try again or type your response.');
+                    // Show interim results (optional - you can remove this if you don't want live feedback)
+                    const interimTranscript = event.results[i][0].transcript;
+                    console.log('Interim result:', interimTranscript);
                 }
-            })
-            .catch(error => {
-                console.error('Speech-to-text error:', error);
+            }
+
+            console.log('Processing results - isFinal:', isFinal, 'transcript:', transcript.trim());
+
+            // If we have a final result, process it
+            if (isFinal && transcript.trim()) {
+                console.log('About to stop speech recognition and process transcript');
+                stopSpeechRecognition();
+                
+                // Remove the "Listening..." message
                 const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
-                if (lastBotMsg) {
+                if (lastBotMsg && lastBotMsg.textContent.includes('Listening...')) {
                     lastBotMsg.remove();
                     conversationHistory.pop();
+                    console.log('Removed listening message');
                 }
-                appendMessage('bot', 'Sorry, there was an error processing your speech. Please try typing instead.');
-            });
+
+                // Add the transcribed message
+                console.log('Adding transcribed message to chat');
+                appendMessage('patient', transcript.trim());
+                
+                // Send the transcribed text to the consultation chat
+                console.log('Transcribed message:', transcript.trim());
+                console.log('About to call sendMessageToConsultation');
+                sendMessageToConsultation(transcript.trim());
+            } else {
+                console.log('No final result or empty transcript - not processing');
+            }
+        };
+
+        // Handle speech recognition errors
+        recognition.onerror = function (event) {
+            console.error('Speech recognition error:', event.error);
+            stopSpeechRecognition();
+            
+            // Remove the "Listening..." message
+            const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
+            if (lastBotMsg && lastBotMsg.textContent.includes('Listening...')) {
+                lastBotMsg.remove();
+                conversationHistory.pop();
+            }
+
+            let errorMessage = 'Speech recognition error. ';
+            switch (event.error) {
+                case 'no-speech':
+                    errorMessage += 'No speech was detected. Please try again.';
+                    break;
+                case 'audio-capture':
+                    errorMessage += 'No microphone was found. Please check your microphone.';
+                    break;
+                case 'not-allowed':
+                    errorMessage += 'Microphone access was denied. Please allow microphone access and try again.';
+                    break;
+                case 'network':
+                    errorMessage += 'Network error occurred. Please check your connection.';
+                    break;
+                default:
+                    errorMessage += 'Please try typing your response instead.';
+            }
+            
+            appendMessage('bot', errorMessage);
+        };
+
+        // Handle when speech recognition ends
+        recognition.onend = function () {
+            if (isRecording) {
+                // If we're still supposed to be recording but recognition ended, restart it
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.log('Recognition ended naturally');
+                    stopSpeechRecognition();
+                }
+            }
+        };
+
+        // Start speech recognition
+        try {
+            console.log('Attempting to start speech recognition...');
+            recognition.start();
+            console.log('Speech recognition started successfully');
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            stopSpeechRecognition();
+            appendMessage('bot', 'Could not start speech recognition. Please try typing instead.');
+        }
     }
 
-    // Fallback to browser's built-in speech recognition if Azure fails
-    function fallbackSpeechRecognition() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            appendMessage('bot', 'Speech recognition not supported in this browser.');
-            return;
+    function stopSpeechRecognition() {
+        if (recognition && isRecording) {
+            recognition.stop();
         }
-        appendMessage('bot', 'Listening... Please speak now.');
-        let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = new SpeechRecognition();
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = function (event) {
-            let transcript = event.results[0][0].transcript;
-            appendMessage('patient', transcript);
-            sendMessageToConsultation(transcript);
-        };
-        recognition.onerror = function (event) {
-            appendMessage('bot', 'Speech recognition error. Please try typing your response.');
-        };
-        recognition.start();
+        
+        // Reset UI
+        isRecording = false;
+        micBtn.style.backgroundColor = '';
+        micBtn.innerHTML = '🎤';
     }
 }
 
 // Helper function to send message to consultation endpoint
 function sendMessageToConsultation(message) {
+    console.log('=== sendMessageToConsultation CALLED ===');
+    console.log('Message received:', message);
+    console.log('Current conversation history length:', conversationHistory.length);
+    
     appendMessage('bot', 'Processing...');
+    console.log('Added Processing message, starting API call');
 
     // Use consultation_chat endpoint for structured consultation
     axios.post('/consultation_chat', {
@@ -409,25 +468,30 @@ function sendMessageToConsultation(message) {
         history: conversationHistory.slice(0, -2) // Exclude the current user message and "Processing..." message
     })
         .then(res => {
+            console.log('API response received:', res.data);
             const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
             if (lastBotMsg) {
                 lastBotMsg.remove();
                 conversationHistory.pop(); // Remove "Processing..." from history
+                console.log('Removed processing message');
             }
 
             // Check if an existing patient was found
             if (res.data.existing_patient && res.data.existing_patient.found) {
                 currentPatient = res.data.existing_patient;
                 isReturningPatient = true;
+                console.log('Found returning patient:', currentPatient.name);
 
                 // Show returning patient notification
                 const welcomeMessage = `Welcome back, ${currentPatient.name}! I found your previous medical record from ${currentPatient.last_consultation}.`;
                 appendMessage('bot', welcomeMessage);
             }
 
+            console.log('Adding bot response:', res.data.response);
             appendMessage('bot', res.data.response);
         })
-        .catch(() => {
+        .catch(error => {
+            console.error('API call failed:', error);
             const lastBotMsg = chatWindow.querySelector('.er-bubble.bot:last-child');
             if (lastBotMsg) {
                 lastBotMsg.remove();
@@ -617,10 +681,10 @@ window.addEventListener('DOMContentLoaded', function () {
         const welcomeMessage = 'Welcome to your comprehensive medical consultation! I\'m here to gather detailed information about your health, medical history, and current concerns. If you\'ve been here before, I can access your previous medical records to save time. This consultation will help create a complete medical record that can be shared with healthcare providers. Let\'s begin with your basic information: What is your full name?';
 
         appendMessage('bot', welcomeMessage);
-
+/*
         // Automatically speak the welcome message
         setTimeout(() => {
             speakText(welcomeMessage);
         }, 500); // Small delay to ensure the message is displayed first
-    }
+    */}
 });
